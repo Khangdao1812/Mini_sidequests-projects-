@@ -1,3 +1,8 @@
+#For additional raycasting & viewing visit these two scratch links : 
+#https://scratch.mit.edu/projects/858285273/
+#https://scratch.mit.edu/projects/853747688/
+#This is an upload of one of my oldest python project, at the time, I did not know how to use OOP to organise my code so yeah, a bit messy isn't it.
+
 import pygame as pg
 import sys
 import math
