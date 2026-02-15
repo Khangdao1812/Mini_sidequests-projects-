@@ -1,0 +1,194 @@
+import pygame as pg
+from random import randrange
+
+pg.init()
+screen = pg.display.set_mode((300, 500))
+clock = pg.time.Clock()
+tilesize = 20
+gg = 0
+score = 0
+draw_procedure_x = [[-1, 0, 1, 1], [0, 1, 1, 0], [-1, 0, 0, 1],[0, 0, 0, 0],[-1, -1, 0, 1], [-1, 0, 0, 1], [-1, 0, 0, 1]]
+draw_procedure_y = [[0, 0, 0, 1], [0, 0, 1, 1], [0, 0, 1, 0],[0, 1, 2, 3],[1, 0, 0, 0], [-1, -1, 0, 0], [0, 0, -1, -1]]
+x_block = []
+y_block = []
+running = True
+map_list = [[0] * 15 for _ in range(25)]
+time, timestep = 0, 200
+holding_down = False
+holding_left = False
+holding_right = False
+move_timer = 0
+move_delay = 100
+
+def generate_random():
+    global blocktype, x, y, x_block, y_block, angle
+    blocktype = randrange(1, 8)
+    x_block = draw_procedure_x[blocktype - 1]
+    y_block = draw_procedure_y[blocktype - 1]
+    x = randrange(7,9)
+    y = 1
+    angle = 0
+
+def render_tile(x_cell, y_cell,colour):
+    if colour == 1 : colour = 'blue'
+    elif colour == 2 : colour = 'yellow'
+    elif colour ==3 : colour = 'red'
+    elif colour == 4 : colour = 'cyan'
+    elif colour == 5 : colour = 'orange'
+    elif colour ==6 : colour = 'purple'
+    else : colour = 'green'
+    pg.draw.rect(screen, colour, pg.Rect(1 + 20 * (x_cell - 1), 1 + 20 * (y_cell - 1), tilesize - 1, tilesize - 1))
+
+def draw_bricks_at(a, b):
+    if x - 1 in range(0, 15) and y - 1 in range(0, 25):
+        for i in range(4):
+            render_tile(a + x_block[i], b + y_block[i],blocktype)
+
+def draw_map():
+    for y in range(25):
+        for x in range(15):
+            if map_list[y][x] != 0:
+                render_tile(x + 1, y + 1,map_list[y][x])
+
+def detect_move_vertical():
+    for i in range(4):
+        new_y = y + y_block[i]
+        new_x = x + x_block[i] - 1
+        if new_y >= 25 or new_x < 0 or new_x >= 15 or map_list[new_y][new_x] != 0:
+            return False
+    return True
+
+def detect_move_horizontal(key):
+    for i in range(4):
+        new_y = y + y_block[i] - 1
+        new_x = x + x_block[i] - 1
+        if key == 'right' and (new_x + 1 >= 15 or map_list[new_y][new_x + 1] != 0):
+            return False
+        if key == 'left' and (new_x - 1 < 0 or map_list[new_y][new_x - 1] != 0):
+            return False
+    return True
+
+def check_lines():
+    global map_list,score
+    for row in range(25):
+        if 0 not in map_list[row]:
+            map_list.pop(row)
+            score += 50
+            map_list = [[0] * 15] + map_list
+
+def is_game_over():
+    global gg
+    gg = 0
+    for i in range(4):
+        check_x = x + x_block[i] - 1
+        check_y = y + y_block[i] - 1
+        if check_x in range (0,15) and check_y in range(0,25) :
+            if map_list[check_y][check_x] != 0:
+                gg = 1
+                return True
+        return False
+
+def do_rotate(k):
+    global x_block, y_block
+    if blocktype == 2:
+        return
+    ok, subx, suby = detect_collision(k % 4)
+    if ok:
+        x_block = subx
+        y_block = suby
+    return ok
+
+def detect_collision(a):
+    global x, y
+    if a == 0:
+        subx = draw_procedure_x[blocktype - 1]
+        suby = draw_procedure_y[blocktype - 1]
+    elif a == 1:
+        subx = [-y for y in draw_procedure_y[blocktype - 1]]
+        suby = draw_procedure_x[blocktype - 1]
+    elif a == 2:
+        subx = [-x for x in draw_procedure_x[blocktype - 1]]
+        suby = [-y for y in draw_procedure_y[blocktype - 1]]
+    else:
+        subx = draw_procedure_y[blocktype - 1]
+        suby = [-y for y in draw_procedure_x[blocktype - 1]]
+    for i in range(4):
+        new_x = subx[i] + x - 1
+        new_y = suby[i] + y - 1
+        if new_x not in range(15) or new_y not in range(25):
+            return False, subx, suby
+        if map_list[new_y][new_x] != 0:
+            return False, subx, suby
+    return True, subx, suby
+
+def display(score):
+    font = pg.font.SysFont('Times', 30)
+    text = font.render(str(score), True, (255, 0, 0))
+    screen.blit(text, (10,10))
+
+generate_random()
+
+while running:
+    timenow = pg.time.get_ticks()
+
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            running = False
+        if event.type == pg.KEYDOWN:
+            if event.key == pg.K_a:
+                if do_rotate(angle - 1):
+                    angle -= 1
+            if event.key == pg.K_d:
+                if do_rotate(angle + 1):
+                    angle += 1
+            if event.key == pg.K_RIGHT:
+                holding_right = True
+            if event.key == pg.K_LEFT:
+                holding_left = True
+            if event.key == pg.K_DOWN:
+                holding_down = True
+        if event.type == pg.KEYUP:
+            if event.key == pg.K_RIGHT:
+                holding_right = False
+            if event.key == pg.K_LEFT:
+                holding_left = False
+            if event.key == pg.K_DOWN:
+                holding_down = False
+
+    if timenow - move_timer > move_delay:
+        move_timer = timenow
+        if holding_right and detect_move_horizontal('right'):
+            x += 1
+        if holding_left and detect_move_horizontal('left'):
+            x -= 1
+
+    drop_speed = 50 if holding_down else timestep
+    if timenow - time > drop_speed:
+        time = timenow
+        if detect_move_vertical():
+            y += 1
+        else:
+            for i in range(4):
+                map_list[y + y_block[i] - 1][x + x_block[i] - 1] = blocktype
+            check_lines()
+            generate_random()
+            score +=10
+            if is_game_over() : running = False
+
+    angle = angle % 4
+
+    screen.fill("black")
+    display(score)
+    draw_map()
+    draw_bricks_at(x, y)
+    pg.display.flip()
+    clock.tick(60)
+
+if not running and gg ==1 :
+    font = pg.font.SysFont('Arial', 40)
+    text = font.render("GAME OVER", True, (255, 0, 0))
+    screen.blit(text, (30, 200))
+    pg.display.flip()
+    pg.time.delay(3000)
+
+pg.quit()
